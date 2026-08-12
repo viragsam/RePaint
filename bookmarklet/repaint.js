@@ -7,11 +7,11 @@
   var ROLES = ["bg", "text", "primary", "secondary", "accent"];
 
   var TOKEN_PATTERNS = {
-    bg: /^--.*(background|bg)(?!.*text)/i,
-    text: /^--.*(text|foreground|fg)(?!.*(bg|background))/i,
+    bg: /^--.*(background|bg|panel|surface|canvas|paper|raised)(?!.*text)/i,
+    text: /^--.*(text|foreground|fg|ink)(?!.*(bg|background))/i,
     primary: /^--.*primary/i,
     secondary: /^--.*secondary/i,
-    accent: /^--.*accent/i
+    accent: /^--.*(accent|brand|highlight)/i
   };
 
   var FONT_ROLES = ["heading", "body", "mono"];
@@ -67,9 +67,10 @@
 
   function classify(prop, patterns, found, bucket) {
     for (var key in patterns) {
-      if (patterns[key].test(prop) && !found[bucket + ":" + key]) {
-        found[bucket + ":" + key] = prop;
-      }
+      if (!patterns[key].test(prop)) continue;
+      var mapKey = bucket + ":" + key;
+      if (!found[mapKey]) found[mapKey] = [];
+      if (found[mapKey].indexOf(prop) === -1) found[mapKey].push(prop);
     }
   }
 
@@ -111,8 +112,11 @@
 
   Repaint.prototype.applyColor = function (role, value) {
     var tokenKey = "color:" + role;
-    if (this.tokens[tokenKey]) {
-      document.documentElement.style.setProperty(this.tokens[tokenKey], value);
+    var tokens = this.tokens[tokenKey];
+    if (tokens && tokens.length) {
+      tokens.forEach(function (prop) {
+        document.documentElement.style.setProperty(prop, value);
+      });
     } else {
       this.overrideRules[role] = OVERRIDE_SELECTORS[role] + " { " + colorProp(role) + ": " + value + " !important; }";
       this.renderOverride();
@@ -122,8 +126,11 @@
   Repaint.prototype.applyFont = function (role, value) {
     if (!value) return;
     var tokenKey = "font:" + role;
-    if (this.tokens[tokenKey]) {
-      document.documentElement.style.setProperty(this.tokens[tokenKey], value);
+    var tokens = this.tokens[tokenKey];
+    if (tokens && tokens.length) {
+      tokens.forEach(function (prop) {
+        document.documentElement.style.setProperty(prop, value);
+      });
     } else {
       this.overrideRules["font-" + role] = FONT_OVERRIDE_SELECTORS[role] + " { font-family: " + value + " !important; }";
       this.renderOverride();
@@ -158,20 +165,21 @@
 
   Repaint.prototype.exportCss = function () {
     var lines = [":root {"];
+    var computed = getComputedStyle(document.documentElement);
+    var self = this;
+    function emit(role, bucket) {
+      var tokens = self.tokens[bucket + ":" + role];
+      if (!tokens) return;
+      tokens.forEach(function (prop) {
+        lines.push("  " + prop + ": " + computed.getPropertyValue(prop).trim() + ";");
+      });
+    }
     ROLES.forEach(function (role) {
-      var key = "color:" + role;
-      if (this.tokens[key]) {
-        var value = getComputedStyle(document.documentElement).getPropertyValue(this.tokens[key]);
-        lines.push("  " + this.tokens[key] + ": " + value.trim() + ";");
-      }
-    }, this);
+      emit(role, "color");
+    });
     FONT_ROLES.forEach(function (role) {
-      var key = "font:" + role;
-      if (this.tokens[key]) {
-        var value = getComputedStyle(document.documentElement).getPropertyValue(this.tokens[key]);
-        lines.push("  " + this.tokens[key] + ": " + value.trim() + ";");
-      }
-    }, this);
+      emit(role, "font");
+    });
     lines.push("}");
     if (this.overrideStyle.textContent) {
       lines.push("");
@@ -216,13 +224,13 @@
     var self = this;
     ROLES.forEach(function (role) {
       var el = self.root.querySelector('[data-token-label="' + role + '"]');
-      var key = "color:" + role;
-      el.textContent = self.tokens[key] ? self.tokens[key] : "no token, using override";
+      var tokens = self.tokens["color:" + role];
+      el.textContent = tokens && tokens.length ? tokens.join(", ") : "no token, using override";
     });
     FONT_ROLES.forEach(function (role) {
       var el = self.root.querySelector('[data-token-label="font-' + role + '"]');
-      var key = "font:" + role;
-      el.textContent = self.tokens[key] ? self.tokens[key] : "no token, using override";
+      var tokens = self.tokens["font:" + role];
+      el.textContent = tokens && tokens.length ? tokens.join(", ") : "no token, using override";
     });
   };
 

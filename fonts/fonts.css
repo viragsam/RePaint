@@ -1,0 +1,42 @@
+/*
+Self-hosted font faces used by the RePaint panel's preset dropdowns.
+The .woff2 files referenced here are NOT included in this repo, see fonts/README.md
+for where to get them and what filenames to use. Until the files exist, these
+@font-face rules simply fail to load and the presets silently fall back to
+whatever font-family string ends up unmatched, no crash, no external request.
+*/
+
+@font-face {
+  font-family: "Repaint Inter";
+  src: url("./inter.woff2") format("woff2");
+  font-weight: 400 700;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Repaint Space Grotesk";
+  src: url("./space-grotesk.woff2") format("woff2");
+  font-weight: 400 700;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Repaint Fraunces";
+  src: url("./fraunces.woff2") format("woff2");
+  font-weight: 400 600;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Repaint Newsreader";
+  src: url("./newsreader.woff2") format("woff2");
+  font-weight: 400 600;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Repaint JetBrains Mono";
+  src: url("./jetbrains-mono.woff2") format("woff2");
+  font-weight: 400 700;
+  font-display: swap;
+}

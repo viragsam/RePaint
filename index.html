@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>RePaint</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <style>
+    body {
+      margin: 0;
+      background: #0d0d0f;
+      color: #e8e4dc;
+      font-family: system-ui, sans-serif;
+      display: flex;
+      justify-content: center;
+    }
+    main {
+      max-width: 640px;
+      padding: 64px 24px;
+    }
+    h1 {
+      font-size: 2rem;
+      margin-bottom: 4px;
+    }
+    h1 em {
+      color: #C9A96E;
+      font-style: italic;
+    }
+    p {
+      color: #cfcbc2;
+      line-height: 1.6;
+    }
+    .bookmarklet-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin: 32px 0;
+      padding: 16px;
+      border: 1px solid rgba(232, 228, 220, 0.16);
+      border-radius: 8px;
+      background: #141416;
+    }
+    #bookmarklet-link {
+      display: inline-block;
+      background: #C9A96E;
+      color: #0d0d0f;
+      font-weight: 600;
+      padding: 8px 16px;
+      border-radius: 6px;
+      text-decoration: none;
+      cursor: grab;
+    }
+    .status {
+      color: #8a867e;
+      font-size: 0.85rem;
+    }
+    code {
+      background: #141416;
+      padding: 1px 5px;
+      border-radius: 4px;
+      font-family: monospace;
+    }
+    ol {
+      color: #cfcbc2;
+      line-height: 1.8;
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>RePaint<span style="color:#C9A96E">.</span></h1>
+    <p>Live-edit the fonts and colors of <em>any</em> loaded webpage, the way you'd fiddle
+      with values in dev tools, but through a panel instead of the DOM inspector.</p>
+
+    <div class="bookmarklet-row">
+      <a id="bookmarklet-link" href="#">Drag me to your bookmarks bar</a>
+      <span class="status" id="bookmarklet-status">building link...</span>
+    </div>
+
+    <ol>
+      <li>Drag the button above to your bookmarks bar (or right-click it and add it as a bookmark).</li>
+      <li>Go to any page, including <code>localhost</code>, and click the bookmark.</li>
+      <li>A panel appears top-right. Pick colors and fonts, they apply live.</li>
+      <li>Click <strong>Export CSS</strong> to copy what you landed on back into your project.</li>
+      <li>Optional: to use the bundled web fonts, serve this repo over HTTP and see
+        <code>fonts/README.md</code>.</li>
+    </ol>
+  </main>
+
+  <script>
+    fetch("./bookmarklet/repaint.js")
+      .then(function (res) { return res.text(); })
+      .then(function (code) {
+        var link = document.getElementById("bookmarklet-link");
+        link.href = "javascript:" + encodeURIComponent(code);
+        document.getElementById("bookmarklet-status").textContent = "ready";
+      })
+      .catch(function () {
+        document.getElementById("bookmarklet-status").textContent =
+          "could not load bookmarklet/repaint.js, serve this folder over HTTP rather than opening it as a file";
+      });
+  </script>
+</body>
+</html>

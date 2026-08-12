@@ -26,13 +26,23 @@ manually.
 
 ## How it works
 
-- On click, it scans the page's stylesheets for CSS custom properties that look like
-  color or font roles (`--bg`, `--text-color`, `--font-heading`, etc.) and lets you
-  remap those directly, the precise path, for sites that already use design tokens.
-- For roles it can't find a token for, it injects a single override stylesheet with
-  broad, best-effort selectors (`body`, `button`, `a`, `[class*="card"]`, ...) so the
-  tool still does something useful on sites with hardcoded styles. This path is
-  intentionally blunt, not every element will be caught.
+The panel has three modes, as tabs:
+
+- **Roles**: bg/text/primary/secondary/accent, broad-strokes recoloring. Each role maps
+  to every detected CSS custom property matching that role (a site can split "background"
+  across several tokens, e.g. `--bg`, `--panel`, `--panel-deep`, and all of them move
+  together), or falls back to a best-effort override stylesheet (`body`, `button`, `a`,
+  `[class*="card"]`, ...) when no token matches. Good for quick recolors on sites with a
+  handful of tokens, like your own.
+- **All tokens**: every color-valued CSS custom property found on the page (validated via
+  `CSS.supports("color", ...)`), each with its own swatch, filterable by name. Built for
+  token-rich design systems (GitHub's Primer exposes hundreds: `--bgColor-danger-emphasis`,
+  `--fgColor-accent`, etc.) where the 5-role bucketing is too coarse to be useful.
+- **Pick**: click "Pick an element", then click anything on the page. Its text and
+  background color become editable, scoped to just that element (via a generated
+  `data-repaint-id` attribute), not any token it happens to share with other elements, so
+  edits stay predictable and local.
+
 - Web-font presets (Inter, Fraunces, Space Grotesk, Newsreader, JetBrains Mono) are
   self-hosted, not pulled from Google Fonts at runtime, see `fonts/README.md`. System
   font presets need no server at all.

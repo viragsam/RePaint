@@ -308,6 +308,21 @@
     this.renderTokensList("");
     this.renderPicksList();
     this.setMode("roles");
+    this.watchForRemoval();
+  };
+
+  Repaint.prototype.watchForRemoval = function () {
+    var self = this;
+    if (typeof MutationObserver === "undefined") return;
+    this._removalObserver = new MutationObserver(function () {
+      if (!document.documentElement.contains(self.host)) {
+        document.documentElement.appendChild(self.host);
+      }
+      if (!document.documentElement.contains(self.overrideStyle)) {
+        document.documentElement.appendChild(self.overrideStyle);
+      }
+    });
+    this._removalObserver.observe(document.documentElement, { childList: true, subtree: true });
   };
 
   Repaint.prototype.setMode = function (mode) {

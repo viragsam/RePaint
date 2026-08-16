@@ -16,6 +16,8 @@
 
   var TOKEN_WARN_THRESHOLD = 20;
 
+  var STATE_TOKEN_PATTERN = /(hover|active|disabled|focus|pressed|selected|loading|emphasis|muted)/i;
+
   var FONTS_BASE_STORAGE_KEY = "__repaint_fonts_base__";
 
   var FONT_ROLES = ["heading", "body", "mono"];
@@ -162,6 +164,7 @@
     this.overrideRules = {};
     this.visible = true;
     this.mode = "roles";
+    this.strictMode = false;
     this.fontsBase = this.loadStoredFontsBase() || "http://localhost:8787";
     this.fontsLoaded = false;
     this.picks = [];
@@ -177,9 +180,16 @@
     this.host.style.display = this.visible ? "block" : "none";
   };
 
+  Repaint.prototype.getColorTokens = function (role) {
+    var tokens = this.tokens["color:" + role] || [];
+    if (!this.strictMode) return tokens;
+    return tokens.filter(function (prop) {
+      return !STATE_TOKEN_PATTERN.test(prop);
+    });
+  };
+
   Repaint.prototype.applyColor = function (role, value) {
-    var tokenKey = "color:" + role;
-    var tokens = this.tokens[tokenKey];
+    var tokens = this.getColorTokens(role);
     if (tokens && tokens.length) {
       tokens.forEach(function (prop) {
         document.documentElement.style.setProperty(prop, value);
@@ -259,7 +269,7 @@
       lines.push("  " + prop + ": " + computed.getPropertyValue(prop).trim() + ";");
     }
     ROLES.forEach(function (role) {
-      (self.tokens["color:" + role] || []).forEach(emitProp);
+      self.getColorTokens(role).forEach(emitProp);
     });
     FONT_ROLES.forEach(function (role) {
       (self.tokens["font:" + role] || []).forEach(emitProp);
@@ -298,6 +308,7 @@
     this.root = root;
 
     this.wireTabs();
+    this.wireStrictToggle();
     this.wireColorRoles();
     this.wireFontRoles();
     this.wireFontsServer();
@@ -350,7 +361,7 @@
     var self = this;
     ROLES.forEach(function (role) {
       var el = self.root.querySelector('[data-token-label="' + role + '"]');
-      var tokens = self.tokens["color:" + role];
+      var tokens = self.getColorTokens(role);
       var broad = tokens && tokens.length > TOKEN_WARN_THRESHOLD;
       el.textContent = tokens && tokens.length
         ? tokens.length + " token(s): " + tokens.slice(0, 3).join(", ") + (tokens.length > 3 ? "..." : "") + (broad ? " — broad match, try All tokens for precision" : "")
@@ -369,7 +380,7 @@
       var bodyComputed = getComputedStyle(document.body);
       return rgbToHex(role === "text" ? bodyComputed.color : bodyComputed.backgroundColor);
     }
-    var tokens = this.tokens["color:" + role];
+    var tokens = this.getColorTokens(role);
     if (tokens && tokens.length) {
       var computed = getComputedStyle(document.documentElement);
       return rgbToHex(computed.getPropertyValue(tokens[0]).trim());
@@ -390,6 +401,27 @@
       input.addEventListener("input", function () {
         self.applyColor(role, input.value);
       });
+    });
+  };
+
+  Repaint.prototype.refreshRoleSwatches = function () {
+    var self = this;
+    ROLES.forEach(function (role) {
+      var input = self.root.querySelector('[data-color-role="' + role + '"]');
+      try {
+        input.value = self.getRoleColorHex(role);
+      } catch (e) {}
+    });
+  };
+
+  Repaint.prototype.wireStrictToggle = function () {
+    var self = this;
+    var checkbox = this.root.querySelector("[data-strict-toggle]");
+    checkbox.checked = this.strictMode;
+    checkbox.addEventListener("change", function () {
+      self.strictMode = checkbox.checked;
+      self.updateTokenLabels();
+      self.refreshRoleSwatches();
     });
   };
 
@@ -650,6 +682,8 @@
     "</div>" +
     '<div data-mode-panel="roles">' +
     '<div class="section"><h3>Colors</h3>' +
+    '<label class="row strict-row"><input type="checkbox" data-strict-toggle><span>Strict match (drop hover/active/disabled/emphasis/muted tokens)</span></label>' +
+    '<div class="hint">off by default: broader match, safest across sites. on: fewer, more precise tokens per role, but may drop a role\'s only real token on sites that use those words for actual color variants, not just states.</div>' +
     ROLES.map(function (role) {
       return (
         '<label class="row"><span class="role">' +
@@ -716,6 +750,8 @@
     ".role { width: 60px; text-transform: capitalize; }" +
     ".token { color: #8a867e; font-size: 10px; word-break: break-all; }" +
     ".token-warn { color: #e0a458; }" +
+    ".strict-row { align-items: flex-start; font-size: 11px; }" +
+    ".strict-row input { flex-shrink: 0; margin-top: 1px; }" +
     "select, input[type='text'] { flex: 1; background: #0d0d0f; color: #e8e4dc; border: 1px solid rgba(232,228,220,0.16); border-radius: 4px; padding: 2px 4px; width: 100%; box-sizing: border-box; margin-bottom: 4px; }" +
     "input[type='color'] { width: 28px; height: 20px; padding: 0; border: none; background: none; flex-shrink: 0; }" +
     "button { background: #C9A96E; color: #0d0d0f; border: none; border-radius: 4px; padding: 4px 8px; cursor: pointer; font-weight: 600; }" +

@@ -16,6 +16,8 @@
 
   var TOKEN_WARN_THRESHOLD = 20;
 
+  var FONTS_BASE_STORAGE_KEY = "__repaint_fonts_base__";
+
   var FONT_ROLES = ["heading", "body", "mono"];
 
   var FONT_TOKEN_PATTERNS = {
@@ -100,20 +102,45 @@
     return style;
   }
 
-  function rgbToHex(value) {
-    if (!value) return "#000000";
-    if (value.charAt(0) === "#") return value.length === 4 ? expandHex(value) : value;
-    var m = value.match(/rgba?\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)/i);
-    if (!m) return "#000000";
+  function componentsToHex(r, g, b) {
     return (
       "#" +
-      [m[1], m[2], m[3]]
+      [r, g, b]
         .map(function (n) {
           var h = parseInt(n, 10).toString(16);
           return h.length === 1 ? "0" + h : h;
         })
         .join("")
     );
+  }
+
+  var _hexCtx;
+
+  function colorToHexViaCanvas(value) {
+    if (!_hexCtx) {
+      var canvas = document.createElement("canvas");
+      canvas.width = canvas.height = 1;
+      _hexCtx = canvas.getContext("2d");
+    }
+    _hexCtx.fillStyle = "#000000";
+    _hexCtx.fillStyle = value;
+    _hexCtx.fillRect(0, 0, 1, 1);
+    var data = _hexCtx.getImageData(0, 0, 1, 1).data;
+    return componentsToHex(data[0], data[1], data[2]);
+  }
+
+  function rgbToHex(value) {
+    if (!value) return "#000000";
+    value = value.trim();
+    if (!value) return "#000000";
+    if (value.charAt(0) === "#") return value.length === 4 ? expandHex(value) : value;
+    var m = value.match(/rgba?\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)/i);
+    if (m) return componentsToHex(m[1], m[2], m[3]);
+    try {
+      return colorToHexViaCanvas(value);
+    } catch (e) {
+      return "#000000";
+    }
   }
 
   function expandHex(hex) {
@@ -135,7 +162,7 @@
     this.overrideRules = {};
     this.visible = true;
     this.mode = "roles";
-    this.fontsBase = "http://localhost:8787";
+    this.fontsBase = this.loadStoredFontsBase() || "http://localhost:8787";
     this.fontsLoaded = false;
     this.picks = [];
     this.pickCounter = 0;
@@ -185,6 +212,20 @@
     var css = "";
     for (var key in this.overrideRules) css += this.overrideRules[key] + "\n";
     this.overrideStyle.textContent = css;
+  };
+
+  Repaint.prototype.loadStoredFontsBase = function () {
+    try {
+      return localStorage.getItem(FONTS_BASE_STORAGE_KEY) || "";
+    } catch (e) {
+      return "";
+    }
+  };
+
+  Repaint.prototype.storeFontsBase = function (value) {
+    try {
+      localStorage.setItem(FONTS_BASE_STORAGE_KEY, value);
+    } catch (e) {}
   };
 
   Repaint.prototype.loadFonts = function (base, statusEl) {
@@ -267,6 +308,21 @@
     this.renderTokensList("");
     this.renderPicksList();
     this.setMode("roles");
+    this.watchForRemoval();
+  };
+
+  Repaint.prototype.watchForRemoval = function () {
+    var self = this;
+    if (typeof MutationObserver === "undefined") return;
+    this._removalObserver = new MutationObserver(function () {
+      if (!document.documentElement.contains(self.host)) {
+        document.documentElement.appendChild(self.host);
+      }
+      if (!document.documentElement.contains(self.overrideStyle)) {
+        document.documentElement.appendChild(self.overrideStyle);
+      }
+    });
+    this._removalObserver.observe(document.documentElement, { childList: true, subtree: true });
   };
 
   Repaint.prototype.setMode = function (mode) {
@@ -361,6 +417,7 @@
     input.value = this.fontsBase;
     button.addEventListener("click", function () {
       self.fontsBase = input.value || self.fontsBase;
+      self.storeFontsBase(self.fontsBase);
       self.loadFonts(self.fontsBase, status);
     });
   };

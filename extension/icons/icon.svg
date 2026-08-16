@@ -1,4 +1,11 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128">
-  <rect width="128" height="128" rx="24" fill="#C9A96E"/>
-  <text x="64" y="90" font-family="Georgia, 'Times New Roman', serif" font-size="84" font-weight="700" fill="#0d0d0f" text-anchor="middle">R</text>
+  <rect width="128" height="128" rx="26" fill="#0d0d0f"/>
+  <path d="M64 10
+           C 44 44, 28 68, 28 90
+           C 28 113, 44 128, 64 128
+           C 84 128, 100 113, 100 90
+           C 100 68, 84 44, 64 10
+           Z"
+        fill="#C9A96E"/>
+  <ellipse cx="48" cy="82" rx="10" ry="15" fill="#17171a" opacity="0.28"/>
 </svg>

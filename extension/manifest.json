@@ -1,0 +1,23 @@
+{
+  "manifest_version": 3,
+  "name": "RePaint",
+  "version": "0.1.0",
+  "description": "Live-edit the fonts and colors of any loaded webpage through a side panel.",
+  "action": {
+    "default_title": "RePaint: toggle panel",
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "48": "icons/icon48.png",
+      "128": "icons/icon128.png"
+    }
+  },
+  "icons": {
+    "16": "icons/icon16.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  },
+  "background": {
+    "service_worker": "background.js"
+  },
+  "permissions": ["activeTab", "scripting"]
+}

@@ -14,6 +14,8 @@
     accent: /^--.*(accent|brand|highlight)/i
   };
 
+  var TOKEN_WARN_THRESHOLD = 20;
+
   var FONT_ROLES = ["heading", "body", "mono"];
 
   var FONT_TOKEN_PATTERNS = {
@@ -59,20 +61,21 @@
           var prop = rule.style[j];
           if (typeof prop !== "string" || prop.indexOf("--") !== 0) continue;
           allProps[prop] = true;
-          classify(prop, TOKEN_PATTERNS, found, "color");
-          classify(prop, FONT_TOKEN_PATTERNS, found, "font");
+          classify(prop, TOKEN_PATTERNS, found, "color", false);
+          classify(prop, FONT_TOKEN_PATTERNS, found, "font", true);
         }
       }
       if (rule.cssRules) scanRules(rule.cssRules, found, allProps);
     }
   }
 
-  function classify(prop, patterns, found, bucket) {
+  function classify(prop, patterns, found, bucket, exclusive) {
     for (var key in patterns) {
       if (!patterns[key].test(prop)) continue;
       var mapKey = bucket + ":" + key;
       if (!found[mapKey]) found[mapKey] = [];
       if (found[mapKey].indexOf(prop) === -1) found[mapKey].push(prop);
+      if (exclusive) return;
     }
   }
 
@@ -292,7 +295,11 @@
     ROLES.forEach(function (role) {
       var el = self.root.querySelector('[data-token-label="' + role + '"]');
       var tokens = self.tokens["color:" + role];
-      el.textContent = tokens && tokens.length ? tokens.length + " token(s): " + tokens.slice(0, 3).join(", ") + (tokens.length > 3 ? "..." : "") : "no token, using override";
+      var broad = tokens && tokens.length > TOKEN_WARN_THRESHOLD;
+      el.textContent = tokens && tokens.length
+        ? tokens.length + " token(s): " + tokens.slice(0, 3).join(", ") + (tokens.length > 3 ? "..." : "") + (broad ? " — broad match, try All tokens for precision" : "")
+        : "no token, using override";
+      el.classList.toggle("token-warn", !!broad);
     });
     FONT_ROLES.forEach(function (role) {
       var el = self.root.querySelector('[data-token-label="font-' + role + '"]');
@@ -301,10 +308,29 @@
     });
   };
 
+  Repaint.prototype.getRoleColorHex = function (role) {
+    if (role === "bg" || role === "text") {
+      var bodyComputed = getComputedStyle(document.body);
+      return rgbToHex(role === "text" ? bodyComputed.color : bodyComputed.backgroundColor);
+    }
+    var tokens = this.tokens["color:" + role];
+    if (tokens && tokens.length) {
+      var computed = getComputedStyle(document.documentElement);
+      return rgbToHex(computed.getPropertyValue(tokens[0]).trim());
+    }
+    var el = document.querySelector(OVERRIDE_SELECTORS[role]);
+    if (!el) return "#000000";
+    var elComputed = getComputedStyle(el);
+    return rgbToHex(colorProp(role) === "color" ? elComputed.color : elComputed.backgroundColor);
+  };
+
   Repaint.prototype.wireColorRoles = function () {
     var self = this;
     ROLES.forEach(function (role) {
       var input = self.root.querySelector('[data-color-role="' + role + '"]');
+      try {
+        input.value = self.getRoleColorHex(role);
+      } catch (e) {}
       input.addEventListener("input", function () {
         self.applyColor(role, input.value);
       });
@@ -632,6 +658,7 @@
     ".row { display: flex; align-items: center; gap: 6px; margin-bottom: 4px; }" +
     ".role { width: 60px; text-transform: capitalize; }" +
     ".token { color: #8a867e; font-size: 10px; word-break: break-all; }" +
+    ".token-warn { color: #e0a458; }" +
     "select, input[type='text'] { flex: 1; background: #0d0d0f; color: #e8e4dc; border: 1px solid rgba(232,228,220,0.16); border-radius: 4px; padding: 2px 4px; width: 100%; box-sizing: border-box; margin-bottom: 4px; }" +
     "input[type='color'] { width: 28px; height: 20px; padding: 0; border: none; background: none; flex-shrink: 0; }" +
     "button { background: #C9A96E; color: #0d0d0f; border: none; border-radius: 4px; padding: 4px 8px; cursor: pointer; font-weight: 600; }" +
